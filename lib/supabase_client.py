@@ -7,17 +7,19 @@ from supabase import create_client
 
 _client = None
 
-# Tier 1 : GAFAM + labs IA, priorité absolue dans le top des offres ("hola").
+# Tier 1 : GAFAM/FAANG + labs IA, priorité absolue dans le top des offres ("hola").
 TOP_PRIORITY_RE = re.compile(
-    r"\bgoogle\b|\bapple\b|\bamazon\b|\bmicrosoft\b|\bopenai\b|\banthropic\b",
+    r"\bgoogle\b|\bapple\b|\bamazon\b|\bmicrosoft\b|\bopenai\b|\banthropic\b|"
+    r"\bmeta\b|\bfacebook\b|\bnetflix\b",
     re.IGNORECASE,
 )
 
-# Tier 2 : grandes entreprises (banques CAC40, ESN, etc.) à faire remonter ensuite.
+# Tier 2 : grandes entreprises (banques CAC40, ESN, géants tech US, etc.) à faire remonter ensuite.
 PRIORITY_COMPANIES_RE = re.compile(
     r"\bbnp\b|soci[ée]t[ée]\s+g[ée]n[ée]rale|\bsg\b|cr[ée]dit\s+agricole|\bthales\b|"
     r"\bbpce\b|l['’]?or[ée]al|air\s+france|capgemini|sopra\s*steria|\baxa\b|"
-    r"\borange\b|\blvmh\b|decathlon|doctolib|\bedf\b",
+    r"\borange\b|\blvmh\b|decathlon|doctolib|\bedf\b|"
+    r"\bibm\b|salesforce|\bcisco\b|\boracle\b|\bsap\b|servicenow|\badp\b",
     re.IGNORECASE,
 )
 
