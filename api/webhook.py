@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+import traceback
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse
@@ -148,10 +149,15 @@ def handle_new_offer_url(chat_id, url):
 
         texto = jina_client.fetch_texto_pagina(url)
         if not texto:
-            telegram_client.send_message(chat_id, "⚠️ No pude leer esa oferta. ¿La URL es correcta?")
+            telegram_client.send_message(chat_id, "⚠️ Jina no pudo leer esa oferta. ¿La URL es correcta y pública?")
             return
 
-        infos = gemini_client.analyser_offre(texto)
+        try:
+            infos = gemini_client.analyser_offre(texto)
+        except Exception as e:
+            telegram_client.send_message(chat_id, f"⚠️ Gemini no pudo analizar la oferta: {e}")
+            return
+
         score = calcular_score_global(infos)
         offer = supabase_client.upsert_offer(url, analysis=infos, score_global=score, raw_text=texto, status="new")
 
@@ -224,7 +230,11 @@ def handle_selection(chat_id, text, context):
     infos = offer.get("analysis")
     if not infos:
         telegram_client.send_message(chat_id, "🔎 Analizando oferta con Gemini...")
-        infos = gemini_client.analyser_offre(offer["raw_text"])
+        try:
+            infos = gemini_client.analyser_offre(offer["raw_text"])
+        except Exception as e:
+            telegram_client.send_message(chat_id, f"⚠️ Gemini no pudo analizar la oferta: {e}")
+            return
         score = calcular_score_global(infos)
         status = "new" if infos.get("duree_mois") == 24 else "incompatible"
         supabase_client.update_offer_analysis(offer_id, infos, score, status=status)
@@ -250,15 +260,19 @@ def handle_confirmation(chat_id, text, context):
 
         telegram_client.send_message(chat_id, "✍️ Generando candidatura...")
 
-        docx_bytes = docx_gen.generer_lettre_bytes(infos)
-        pdf_bytes = pdf_convert.docx_a_pdf(docx_bytes, filename="lettre.docx")
+        try:
+            docx_bytes = docx_gen.generer_lettre_bytes(infos)
+            pdf_bytes = pdf_convert.docx_a_pdf(docx_bytes, filename="lettre.docx")
 
-        entreprise = infos.get("entreprise_nom", "Entreprise").replace(" ", "_")
-        telegram_client.send_document(chat_id, pdf_bytes, f"Lettre_Motivation_{entreprise}.pdf")
+            entreprise = infos.get("entreprise_nom", "Entreprise").replace(" ", "_")
+            telegram_client.send_document(chat_id, pdf_bytes, f"Lettre_Motivation_{entreprise}.pdf")
 
-        cv_filename = CV_MAP.get(infos.get("type_cv"), CV_MAP["Data_Engineer"])
-        cv_bytes = (ASSETS_CVS / cv_filename).read_bytes()
-        telegram_client.send_document(chat_id, cv_bytes, cv_filename)
+            cv_filename = CV_MAP.get(infos.get("type_cv"), CV_MAP["Data_Engineer"])
+            cv_bytes = (ASSETS_CVS / cv_filename).read_bytes()
+            telegram_client.send_document(chat_id, cv_bytes, cv_filename)
+        except Exception as e:
+            telegram_client.send_message(chat_id, f"⚠️ Error generando la candidatura: {e}")
+            return
 
         supabase_client.update_offer_status(offer_id, "applied")
         _proponer_otra_oferta(chat_id, offer_ids)
@@ -287,6 +301,17 @@ def process_update(update):
 
     text = message["text"].strip()
 
+    try:
+        _dispatch(chat_id, text)
+    except Exception as e:
+        traceback.print_exc()
+        try:
+            telegram_client.send_message(chat_id, f"❌ Error inesperado: {type(e).__name__}: {e}")
+        except Exception:
+            pass
+
+
+def _dispatch(chat_id, text):
     conv = supabase_client.get_conversation_state(chat_id)
     state = conv.get("state", "idle")
     context = conv.get("context") or {}

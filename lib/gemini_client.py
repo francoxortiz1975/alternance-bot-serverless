@@ -113,8 +113,12 @@ def configure_api_key(api_key):
     genai.configure(api_key=api_key)
 
 
-def _gemini_generate(prompt, model_name="gemini-2.5-flash", max_retries=3):
-    """Appel Gemini avec cascade de modèles + retry sur 429."""
+def _gemini_generate(prompt, model_name="gemini-2.5-flash", max_retries=2, max_attente=12):
+    """Appel Gemini avec cascade de modèles + retry sur 429.
+
+    `max_attente` borne le temps d'attente entre tentatives, pour ne pas dépasser
+    le `maxDuration` de la fonction Vercel (le webhook doit répondre en <60s).
+    """
     cascade = [model_name, "gemini-2.0-flash", "gemini-2.0-flash-lite"]
     seen = set()
     cascade = [m for m in cascade if not (m in seen or seen.add(m))]
@@ -134,7 +138,7 @@ def _gemini_generate(prompt, model_name="gemini-2.5-flash", max_retries=3):
                         last_exc = e
                         break
                     m = re.search(r'retry[^\d]*(\d+)', msg, re.IGNORECASE)
-                    attente = int(m.group(1)) + 5 if m else 65
+                    attente = min(int(m.group(1)) + 5 if m else max_attente, max_attente)
                     if tentative < max_retries:
                         time.sleep(attente)
                         continue
