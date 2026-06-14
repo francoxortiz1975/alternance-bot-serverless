@@ -1,0 +1,5 @@
+python-docx
+google-generativeai
+requests
+json-repair
+supabase
