@@ -1,10 +1,22 @@
 """Helpers Supabase : état de conversation, ofertas, sources."""
 
 import os
+import re
 
 from supabase import create_client
 
 _client = None
+
+# Entreprises à faire remonter en priorité dans le top des offres ("hola").
+PRIORITY_COMPANIES_RE = re.compile(
+    r"\bbnp\b|soci[ée]t[ée]\s+g[ée]n[ée]rale|\bsg\b|cr[ée]dit\s+agricole|\bthales\b",
+    re.IGNORECASE,
+)
+
+
+def _is_priority_offer(offer):
+    texto = " ".join(filter(None, [offer.get("title"), offer.get("location"), offer.get("raw_text")]))
+    return bool(PRIORITY_COMPANIES_RE.search(texto))
 
 
 def get_client():
@@ -90,17 +102,20 @@ def update_offer_analysis(offer_id, analysis, score_global, status=None):
 
 
 def get_top_offers(limit=15):
-    """Dernières offres trouvées par le scraping, en attente de revue (pas encore analysées par Gemini)."""
+    """Dernières offres trouvées par le scraping, en attente de revue (pas encore analysées par Gemini).
+
+    Les offres des entreprises prioritaires (PRIORITY_COMPANIES_RE) remontent en premier."""
     res = (
         get_client()
         .table("offers")
         .select("*")
         .eq("status", "new")
         .order("scraped_at", desc=True)
-        .limit(limit)
+        .limit(limit * 3)
         .execute()
     )
-    return res.data
+    offers = sorted(res.data, key=lambda o: not _is_priority_offer(o))
+    return offers[:limit]
 
 
 # ─── sources ─────────────────────────────────────────────────────────────────

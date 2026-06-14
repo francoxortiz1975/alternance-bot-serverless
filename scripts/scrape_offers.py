@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib import api_alternance_client, jina_client, supabase_client
-from scripts.keyword_filter import extraer_enlaces_filtrados, extraer_localizacion
+from scripts.keyword_filter import es_oferta_excluida, extraer_enlaces_filtrados, extraer_localizacion
 
 
 def scrape_sources():
@@ -35,6 +35,10 @@ def scrape_sources():
             offer_url = oferta["url"]
 
             if supabase_client.get_offer_by_url(offer_url):
+                continue
+
+            if es_oferta_excluida(oferta["titulo"]):
+                print(f"   🚫 Exclu (CFA/organisme de formation) : {oferta['titulo']}")
                 continue
 
             print(f"   ➡️  Nouveau : {oferta['titulo']} ({offer_url})")
@@ -86,7 +90,13 @@ def scrape_api_searches():
                 continue
 
             title = job.get("offer", {}).get("title")
-            location = job.get("workplace", {}).get("location", {}).get("address")
+            workplace = job.get("workplace", {})
+            employeur = workplace.get("name") or workplace.get("brand") or workplace.get("legal_name")
+            location = workplace.get("location", {}).get("address")
+
+            if es_oferta_excluida(title, employeur):
+                print(f"   🚫 Exclu (CFA/organisme de formation) : {title} — {employeur}")
+                continue
 
             print(f"   ➡️  Nouveau : {title} ({offer_url})")
 

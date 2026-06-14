@@ -28,6 +28,17 @@ LOCATION_PATTERNS = [
     ),
 ]
 
+# Organismes de formation qui republient leurs propres formations comme des
+# offres d'emploi (ce ne sont pas de vraies offres d'un employeur) — exclus
+# du scraping si leur nom apparaît comme employeur/titre de l'offre.
+EXCLUDED_KEYWORDS_RE = re.compile(r"\b(iscod|cfa)\b", re.IGNORECASE)
+
+
+def es_oferta_excluida(*textos):
+    """Renvoie True si l'un des textes fournis (titre, employeur...) matche
+    un organisme de formation à exclure (ISCOD, CFA...)."""
+    return any(texto and EXCLUDED_KEYWORDS_RE.search(texto) for texto in textos)
+
 
 def extraer_enlaces_filtrados(texto_markdown, base_url):
     """Retourne une liste de {"titulo": ..., "url": ...} pour les liens dont le
