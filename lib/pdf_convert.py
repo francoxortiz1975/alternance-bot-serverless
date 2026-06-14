@@ -13,6 +13,16 @@ def _headers():
     return {"Authorization": f"Bearer {api_key}"}
 
 
+def _raise_for_status(resp):
+    if not resp.ok:
+        try:
+            body = resp.json()
+            detail = body.get("message", resp.text)
+        except ValueError:
+            detail = resp.text
+        raise requests.HTTPError(f"{resp.status_code} {detail}", response=resp)
+
+
 def docx_a_pdf(docx_bytes, filename="lettre.docx", max_wait=25, poll_interval=1.5):
     """Convertit des bytes DOCX en bytes PDF via CloudConvert. Lève une exception en cas d'échec."""
     job_resp = requests.post(
@@ -32,7 +42,7 @@ def docx_a_pdf(docx_bytes, filename="lettre.docx", max_wait=25, poll_interval=1.
         },
         timeout=15,
     )
-    job_resp.raise_for_status()
+    _raise_for_status(job_resp)
     job = job_resp.json()["data"]
     job_id = job["id"]
 
@@ -44,14 +54,14 @@ def docx_a_pdf(docx_bytes, filename="lettre.docx", max_wait=25, poll_interval=1.
         files={"file": (filename, docx_bytes)},
         timeout=15,
     )
-    upload_resp.raise_for_status()
+    _raise_for_status(upload_resp)
 
     elapsed = 0.0
     while elapsed < max_wait:
         status_resp = requests.get(
             f"{CLOUDCONVERT_API_URL}/jobs/{job_id}", headers=_headers(), timeout=15
         )
-        status_resp.raise_for_status()
+        _raise_for_status(status_resp)
         job = status_resp.json()["data"]
 
         if job["status"] == "error":
