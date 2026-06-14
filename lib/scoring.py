@@ -11,13 +11,14 @@ POIDS = {
 
 CV_MAP = {
     "Data_Engineer":     "Alternance_ORTIZ_M1MIAGE_Dauphine_INGDATApdf.pdf",
-    "Data_IA":           "Alternance_ORTIZ_M1MIAGE_Dauphine_INGDATApdf.pdf",
+    "Data_IA":           "Alternance_ORTIZ_M1MIAGE_Dauphine_IngIA.pdf",
     "Data_Scientist":    "Alternance_ORTIZ_M1MIAGE_Dauphine_DataScientist.pdf",
     "Software_Engineer": "Alternance_ORTIZ_M1MIAGE_Dauphine_DevSoftware.pdf",
-    "DevOps":            "Alternance_ORTIZ_M1MIAGE_Dauphine_DevSoftware.pdf",
+    "DevOps":            "Alternance_ORTIZ_M1MIAGE_Dauphine_IngDevOps.pdf",
     "Chef_de_Projet":    "Alternance_ORTIZ_M1MIAGE_Dauphine_ChefProjet.pdf",
     "Business_Analyst":  "Alternance_ORTIZ_M1MIAGE_Dauphine_BusinessAnalyst.pdf",
     "Data_Analyst":      "Alternance_ORTIZ_M1MIAGE_Dauphine_DataAnalyst.pdf",
+    "IT_Generalist":     "Alternance_ORTIZ_M1MIAGE_Dauphine_GENERAL.pdf",
 }
 
 # ─── PARAGRAPHES TECHNIQUES DE BASE ─────────────────────────────────────────
@@ -115,6 +116,18 @@ PARAGRAPHES_TECH = {
         "analysant des flux de données médicales. Au-delà de ces compétences, je co-signe "
         "un papier accepté à ITiCSE 2026 (conférence ACM), pour lequel j'ai travaillé en "
         "cycles itératifs et validé des résultats de manière rigoureuse."
+    ),
+    "IT_Generalist": (
+        "Sur le plan technique, je maîtrise un socle généraliste — Python, SQL, Git et les "
+        "API REST — que je combine à une appétence pour la coordination de projets et le "
+        "dialogue entre équipes techniques et métier. Cette polyvalence me permet de "
+        "m'adapter rapidement à des environnements et des missions variés. Je mets ces "
+        "compétences en pratique chez MediLyft, une entreprise de santé numérique, où je "
+        "conçois l'architecture de données et le workflow d'un chatbot pré-diagnostique, en "
+        "assurant à la fois le développement et le suivi du projet. Au-delà de ces "
+        "compétences, je co-signe un papier accepté à ITiCSE 2026 (conférence ACM), pour "
+        "lequel j'ai travaillé en cycles itératifs et validé des résultats de manière "
+        "rigoureuse."
     ),
 }
 

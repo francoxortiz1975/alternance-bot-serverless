@@ -55,7 +55,7 @@ Analyse cette offre d'emploi et retourne un JSON avec EXACTEMENT ces champs :
   "phrase_motivation": "Ce que Franco veut développer. Commencer par verbe infinitif.",
   "domaine_technique": "Domaine technique principal",
   "secteur": "Secteur de l'entreprise",
-  "type_cv": "Un parmi : Data_Engineer, Data_IA, Data_Scientist, Software_Engineer, DevOps, Chef_de_Projet, Business_Analyst, Data_Analyst",
+  "type_cv": "Un parmi : Data_Engineer, Data_IA, Data_Scientist, Software_Engineer, DevOps, Chef_de_Projet, Business_Analyst, Data_Analyst, IT_Generalist",
   "paragraphe_tech_adapte": "Voir instructions ci-dessous"
 }}
 
@@ -65,6 +65,8 @@ Règles pour les scores de compatibilité (0-100) :
 - missions : adéquation entre les missions et le profil MIAGE data/dev de Franco
 - localisation : 100 = moins de 20 min de Dauphine, 80 = 20-30 min, 60 = 30-45 min, 40 = 45-60 min, 20 = plus d'1h. Tiens compte du rythme 1S/1S.
 - entreprise : prestige, dynamisme tech, valeur CV, ambiance probable
+
+Pour "type_cv", utilise IT_Generalist si l'offre est un poste généraliste informatique/gestion (support IT, coordination, polyvalence technique et métier) qui ne correspond clairement à aucune des autres catégories.
 
 Pour "paragraphe_tech_adapte" :
 - Prends le paragraphe de base correspondant au type_cv (voir ci-dessous)
@@ -97,6 +99,9 @@ Business_Analyst :
 
 Data_Analyst :
 {para_Data_Analyst}
+
+IT_Generalist :
+{para_IT_Generalist}
 
 Offre :
 {offre}
@@ -176,6 +181,7 @@ def analyser_offre(offre_texte):
         para_Chef_de_Projet   = PARAGRAPHES_TECH["Chef_de_Projet"],
         para_Business_Analyst = PARAGRAPHES_TECH["Business_Analyst"],
         para_Data_Analyst     = PARAGRAPHES_TECH["Data_Analyst"],
+        para_IT_Generalist    = PARAGRAPHES_TECH["IT_Generalist"],
         offre                 = offre_texte,
     )
 
