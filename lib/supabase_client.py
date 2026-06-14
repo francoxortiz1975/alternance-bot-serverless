@@ -7,16 +7,29 @@ from supabase import create_client
 
 _client = None
 
-# Entreprises à faire remonter en priorité dans le top des offres ("hola").
+# Tier 1 : GAFAM + labs IA, priorité absolue dans le top des offres ("hola").
+TOP_PRIORITY_RE = re.compile(
+    r"\bgoogle\b|\bapple\b|\bamazon\b|\bmicrosoft\b|\bopenai\b|\banthropic\b",
+    re.IGNORECASE,
+)
+
+# Tier 2 : grandes entreprises (banques CAC40, ESN, etc.) à faire remonter ensuite.
 PRIORITY_COMPANIES_RE = re.compile(
-    r"\bbnp\b|soci[ée]t[ée]\s+g[ée]n[ée]rale|\bsg\b|cr[ée]dit\s+agricole|\bthales\b",
+    r"\bbnp\b|soci[ée]t[ée]\s+g[ée]n[ée]rale|\bsg\b|cr[ée]dit\s+agricole|\bthales\b|"
+    r"\bbpce\b|l['’]?or[ée]al|air\s+france|capgemini|sopra\s*steria|\baxa\b|"
+    r"\borange\b|\blvmh\b|decathlon|doctolib|\bedf\b",
     re.IGNORECASE,
 )
 
 
-def _is_priority_offer(offer):
+def _offer_priority_rank(offer):
+    """0 = GAFAM/IA (tier 1), 1 = grandes entreprises (tier 2), 2 = reste."""
     texto = " ".join(filter(None, [offer.get("title"), offer.get("location"), offer.get("raw_text")]))
-    return bool(PRIORITY_COMPANIES_RE.search(texto))
+    if TOP_PRIORITY_RE.search(texto):
+        return 0
+    if PRIORITY_COMPANIES_RE.search(texto):
+        return 1
+    return 2
 
 
 def get_client():
@@ -104,7 +117,8 @@ def update_offer_analysis(offer_id, analysis, score_global, status=None):
 def get_top_offers(limit=15):
     """Dernières offres trouvées par le scraping, en attente de revue (pas encore analysées par Gemini).
 
-    Les offres des entreprises prioritaires (PRIORITY_COMPANIES_RE) remontent en premier."""
+    Les offres GAFAM/IA (TOP_PRIORITY_RE) remontent en premier, puis les grandes
+    entreprises (PRIORITY_COMPANIES_RE), puis le reste."""
     res = (
         get_client()
         .table("offers")
@@ -114,7 +128,7 @@ def get_top_offers(limit=15):
         .limit(limit * 3)
         .execute()
     )
-    offers = sorted(res.data, key=lambda o: not _is_priority_offer(o))
+    offers = sorted(res.data, key=_offer_priority_rank)
     return offers[:limit]
 
 
