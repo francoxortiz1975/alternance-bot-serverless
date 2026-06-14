@@ -31,3 +31,18 @@ create table conversation_state (
   context jsonb,
   updated_at timestamptz not null default now()
 );
+
+-- Búsquedas configuradas contra la API pública "La bonne alternance"
+-- (https://api.apprentissage.beta.gouv.fr) — método alternativo al scraping
+-- de páginas de empresas via `sources` + Jina.
+create table api_searches (
+  id serial primary key,
+  name text not null,
+  romes text,                  -- códigos ROME separados por coma, ej: 'M1810,M1802'
+  latitude numeric,
+  longitude numeric,
+  radius integer not null default 30,
+  target_diploma_level text,   -- nivel europeo de diploma: "3" a "7"
+  active boolean not null default true,
+  last_scraped_at timestamptz
+);

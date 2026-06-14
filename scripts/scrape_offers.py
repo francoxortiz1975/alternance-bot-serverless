@@ -1,4 +1,5 @@
-"""Entrypoint du cron GitHub Actions : scrape les pages carrières via filtres de mots-clés.
+"""Entrypoint du cron GitHub Actions : scrape les pages carrières (Jina + mots-clés)
+et interroge l'API "La bonne alternance" (recherches géo/ROME configurées).
 
 Aucun appel Gemini ici — on stocke juste titre/localisation/lien + le texte brut
 de l'offre. L'analyse Gemini (compatibilité, score, lettre) se fait plus tard,
@@ -11,11 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib import jina_client, supabase_client
+from lib import api_alternance_client, jina_client, supabase_client
 from scripts.keyword_filter import extraer_enlaces_filtrados, extraer_localizacion
 
 
-def main():
+def scrape_sources():
     sources = supabase_client.get_active_sources()
     print(f"📚 {len(sources)} source(s) active(s)")
 
@@ -57,6 +58,53 @@ def main():
 
         supabase_client.update_source_last_scraped(source["id"], datetime.now(timezone.utc).isoformat())
 
+
+def scrape_api_searches():
+    searches = supabase_client.get_active_api_searches()
+    print(f"\n🔌 {len(searches)} recherche(s) API Alternance active(s)")
+
+    for search in searches:
+        print(f"\n🔌 {search['name']}")
+
+        try:
+            jobs = api_alternance_client.search_offers(
+                romes=search.get("romes"),
+                latitude=search.get("latitude"),
+                longitude=search.get("longitude"),
+                radius=search.get("radius") or 30,
+                target_diploma_level=search.get("target_diploma_level"),
+            )
+        except Exception as e:
+            print(f"   ⚠️  Erreur API : {e}")
+            continue
+
+        print(f"   🔎 {len(jobs)} offre(s) trouvée(s)")
+
+        for job in jobs:
+            offer_url = job.get("apply", {}).get("url")
+            if not offer_url or supabase_client.get_offer_by_url(offer_url):
+                continue
+
+            title = job.get("offer", {}).get("title")
+            location = job.get("workplace", {}).get("location", {}).get("address")
+
+            print(f"   ➡️  Nouveau : {title} ({offer_url})")
+
+            supabase_client.upsert_offer(
+                offer_url,
+                title=title,
+                location=location,
+                raw_text=api_alternance_client.job_to_text(job),
+                status="new",
+            )
+            print(f"      ✅ Sauvegardé — {location or 'localisation inconnue'}")
+
+        supabase_client.update_api_search_last_scraped(search["id"], datetime.now(timezone.utc).isoformat())
+
+
+def main():
+    scrape_sources()
+    scrape_api_searches()
     print("\n✅ Scraping terminé.")
 
 

@@ -122,3 +122,14 @@ def add_source(url, name):
         .execute()
     )
     return res.data[0]
+
+
+# ─── api_searches ────────────────────────────────────────────────────────────
+
+def get_active_api_searches():
+    res = get_client().table("api_searches").select("*").eq("active", True).execute()
+    return res.data
+
+
+def update_api_search_last_scraped(search_id, timestamp):
+    get_client().table("api_searches").update({"last_scraped_at": timestamp}).eq("id", search_id).execute()

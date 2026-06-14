@@ -6,6 +6,7 @@ Bot de Telegram 100% serverless para automatizar candidaturas de alternance:
 - **Supabase** (Postgres) → guarda ofertas scrapeadas/analizadas + estado de la conversación.
 - **GitHub Actions** (cron cada 6h) → scrapea páginas de carreras de empresas y analiza nuevas ofertas.
 - **Jina Reader** → obtiene el texto de páginas web (sustituye a Playwright).
+- **API La bonne alternance** (api.apprentissage.beta.gouv.fr) → búsquedas estructuradas de ofertas por código ROME, geolocalización y nivel de diploma (método alternativo a Jina, sin scraping).
 - **Gemini API** → análisis y scoring de cada oferta.
 - **CloudConvert** → convierte la carta DOCX generada a PDF.
 - **Telegram Bot API** → vía HTTP directo, sin librerías.
@@ -18,7 +19,12 @@ Costo: **$0** (todos los servicios usados están en su free tier, sin tarjeta de
 2. **Escribir "hola"** → el bot muestra hasta 15 ofertas ya scrapeadas (título, ubicación y enlace — sin análisis todavía). Respondes con un número para que el bot analice *esa* oferta con Gemini (al instante, no antes) y te muestre el detalle completo + "¿Generar candidatura? o/n". Después de cada candidatura generada o descartada, el bot pregunta "¿quieres ver otra oferta?" — puedes seguir eligiendo números de la lista o responder "no"/"listo" para terminar.
 3. **`/add <url>`** → agrega una página de carreras de empresa a la tabla `sources`, para que el cron la incluya en el próximo scraping (el nombre de la fuente se deriva automáticamente del dominio).
 
-El cron de GitHub Actions alimenta el flujo 2: scrapea periódicamente las páginas configuradas en la tabla `sources` **usando solo filtros de texto** (palabras clave del puesto + localización), sin llamar a Gemini. Guarda título, ubicación y enlace de cada oferta que matchea. El análisis Gemini (compatibilidad, score, carta) se hace de forma diferida, solo cuando eliges una oferta desde el bot o pegas una URL directamente.
+El cron de GitHub Actions alimenta el flujo 2, con **dos métodos independientes y complementarios**:
+
+1. **`sources` + Jina** → scrapea periódicamente las páginas configuradas en la tabla `sources` **usando solo filtros de texto** (palabras clave del puesto + localización), sin llamar a Gemini.
+2. **`api_searches` + API "La bonne alternance"** → consulta directamente la API pública oficial con criterios estructurados (códigos ROME, geolocalización, radio, nivel de diploma) — sin scraping ni parsing de HTML.
+
+Ambos métodos guardan título, ubicación y enlace de cada oferta encontrada. El análisis Gemini (compatibilidad, score, carta) se hace de forma diferida, solo cuando eliges una oferta desde el bot o pegas una URL directamente.
 
 ### Sobre los límites de la API de Gemini
 
@@ -46,6 +52,14 @@ Crea una cuenta gratis en [cloudconvert.com](https://cloudconvert.com/dashboard/
 ### 4. Gemini API
 
 Reutiliza tu key existente de [aistudio.google.com](https://aistudio.google.com) → `GEMINI_API_KEY`.
+
+### 4bis. API "La bonne alternance" (opcional, segundo método de scraping)
+
+1. Crea una cuenta en [api.apprentissage.beta.gouv.fr](https://api.apprentissage.beta.gouv.fr/fr/compte/profil).
+2. Genera una clave de API (scope lectura de `job:search` es suficiente) → `API_ALTERNANCE_KEY`.
+3. Configura tus búsquedas en la tabla `api_searches` (ver [`supabase/seed_api_searches.sql`](supabase/seed_api_searches.sql)): código(s) ROME, latitud/longitud, radio y nivel de diploma.
+
+Si no configuras esto, el bot sigue funcionando normalmente con `sources` + Jina — es un método adicional, no un reemplazo.
 
 ### 5. Telegram
 
@@ -91,6 +105,7 @@ Verifica con `https://api.telegram.org/bot<TOKEN>/getWebhookInfo`.
 2. En **Settings → Secrets and variables → Actions**, añade:
    - `GEMINI_API_KEY`
    - `JINA_API_KEY`
+   - `API_ALTERNANCE_KEY` (opcional, ver paso 4bis)
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_KEY`
 3. El workflow [`scrape.yml`](.github/workflows/scrape.yml) corre cada 6h automáticamente. Puedes lanzarlo manualmente desde la pestaña **Actions → Scrape job offers → Run workflow**.
@@ -103,6 +118,17 @@ Inserta filas en la tabla `sources` (vía Supabase dashboard o SQL):
 insert into sources (name, url) values
   ('Mi Empresa - Alternance', 'https://empresa.com/carreras?contrato=alternance');
 ```
+
+### 10. Añadir búsquedas vía API "La bonne alternance" (opcional)
+
+Si configuraste `API_ALTERNANCE_KEY` (paso 4bis), inserta filas en `api_searches`:
+
+```sql
+insert into api_searches (name, romes, latitude, longitude, radius, target_diploma_level) values
+  ('Maintenance & assistance info - Paris', 'M1810,M1802', 48.859, 2.347, 30, '6');
+```
+
+Ver [`supabase/seed_api_searches.sql`](supabase/seed_api_searches.sql) para un ejemplo completo.
 
 ## Desarrollo local
 
