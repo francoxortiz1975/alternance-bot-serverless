@@ -173,10 +173,22 @@ def handle_new_offer_url(chat_id, url):
 STOP_WORDS = {"no", "non", "nada", "listo", "gracias", "stop"}
 
 
+def _empresa_oferta(offer):
+    source_name = (offer.get("sources") or {}).get("name")
+    if source_name:
+        return source_name
+    raw_text = offer.get("raw_text") or ""
+    m = re.search(r"Entreprise\s*:\s*(.+)", raw_text)
+    return m.group(1).strip() if m else None
+
+
 def _ofertas_a_cards(offers):
     L = ["👋 *Ofertas encontradas:*", ""]
     for i, offer in enumerate(offers, start=1):
         L.append(f"{i}. *{offer.get('title') or '?'}*")
+        empresa = _empresa_oferta(offer)
+        if empresa:
+            L.append(f"   🏢 {empresa}")
         if offer.get("location"):
             L.append(f"   📍 {offer['location']}")
         L.append(f"   🔗 {offer['offer_url']}")

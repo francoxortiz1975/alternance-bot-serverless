@@ -26,7 +26,8 @@ PRIORITY_COMPANIES_RE = re.compile(
 
 def _offer_priority_rank(offer):
     """0 = GAFAM/IA (tier 1), 1 = grandes entreprises (tier 2), 2 = reste."""
-    texto = " ".join(filter(None, [offer.get("title"), offer.get("location"), offer.get("raw_text")]))
+    source_name = (offer.get("sources") or {}).get("name")
+    texto = " ".join(filter(None, [offer.get("title"), offer.get("location"), offer.get("raw_text"), source_name]))
     if TOP_PRIORITY_RE.search(texto):
         return 0
     if PRIORITY_COMPANIES_RE.search(texto):
@@ -124,7 +125,7 @@ def get_top_offers(limit=15):
     res = (
         get_client()
         .table("offers")
-        .select("*")
+        .select("*, sources(name)")
         .eq("status", "new")
         .order("scraped_at", desc=True)
         .limit(limit * 3)
