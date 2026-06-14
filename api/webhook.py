@@ -138,16 +138,22 @@ def handle_add_source(chat_id, url):
 
 
 def handle_new_offer_url(chat_id, url):
-    telegram_client.send_message(chat_id, "🔎 Analizando oferta...")
+    existing = supabase_client.get_offer_by_url(url)
 
-    texto = jina_client.fetch_texto_pagina(url)
-    if not texto:
-        telegram_client.send_message(chat_id, "⚠️ No pude leer esa oferta. ¿La URL es correcta?")
-        return
+    if existing and existing.get("analysis"):
+        offer = existing
+        infos = existing["analysis"]
+    else:
+        telegram_client.send_message(chat_id, "🔎 Analizando oferta...")
 
-    infos = gemini_client.analyser_offre(texto)
-    score = calcular_score_global(infos)
-    offer = supabase_client.upsert_offer(url, analysis=infos, score_global=score, raw_text=texto, status="new")
+        texto = jina_client.fetch_texto_pagina(url)
+        if not texto:
+            telegram_client.send_message(chat_id, "⚠️ No pude leer esa oferta. ¿La URL es correcta?")
+            return
+
+        infos = gemini_client.analyser_offre(texto)
+        score = calcular_score_global(infos)
+        offer = supabase_client.upsert_offer(url, analysis=infos, score_global=score, raw_text=texto, status="new")
 
     telegram_client.send_message(chat_id, formater_analyse(infos))
 
