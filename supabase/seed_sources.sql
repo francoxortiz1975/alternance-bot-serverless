@@ -1,6 +1,25 @@
--- Ejemplo: agrega aquí las páginas de carreras de empresas que quieres monitorear.
--- Ejecuta esto (editado) en el SQL editor de Supabase, o inserta filas desde el dashboard.
+-- Páginas de carreras de empresas a monitorear (scraping cada 6h).
+-- Descomenta y ejecuta esto en el SQL editor de Supabase, o inserta filas
+-- desde el dashboard de Supabase (tabla "sources").
+--
+-- Estas URLs fueron validadas manualmente: la página (vista a través de Jina
+-- Reader, igual que lo hace el scraper) expone los títulos de las ofertas
+-- como texto de los links — condición necesaria para que
+-- extraer_enlaces_filtrados() los detecte.
 
 -- insert into sources (name, url) values
---   ('BNP Paribas - Alternance Tech', 'https://group.bnpparibas/carrieres/offres?contrat=alternance&domaine=tech'),
---   ('Societe Generale - Alternance', 'https://careers.societegenerale.com/fr/offres?contract=apprentissage');
+--   ('AXA - Data & Tech', 'https://recrutement.axa.fr/data-science'),
+--   ('Thales - Alternance Data', 'https://careers.thalesgroup.com/fr/fr/search-results?keywords=alternance%20data'),
+--   ('Capgemini - Offres', 'https://www.capgemini.com/fr-fr/carrieres/rejoignez-nous/nos-offres-demploi/?keywords=alternance%20data'),
+--   ('Doctolib - Engineering', 'https://job-boards.greenhouse.io/doctolib'),
+--   ('BNP Paribas - Offres', 'https://group.bnpparibas/en/careers/all-job-offers?keyword=alternance+data'),
+--   ('Orange - Apprentissage', 'https://orange.jobs/site/fr-apprentissage/index.htm'),
+--   ('Sopra Steria - Offres', 'https://jobs.smartrecruiters.com/SopraSteria1')
+-- on conflict (url) do nothing;
+
+-- ── Pendientes (no se encontró una URL de listado que funcione con Jina Reader) ──
+-- Société Générale, Crédit Agricole CIB, BPCE/Natixis, Amundi, La Banque Postale,
+-- Decathlon Tech, ManoMano: sus portales de carreras son demasiado dependientes
+-- de JavaScript (no renderizan la lista de ofertas como texto/links estático),
+-- así que devuelven páginas vacías o 404 vía Jina. Si encuentras una URL de
+-- búsqueda directa que funcione, agrégala aquí con el mismo formato.
