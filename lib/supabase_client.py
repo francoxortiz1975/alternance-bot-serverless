@@ -35,6 +35,42 @@ def _offer_priority_rank(offer):
     return 2
 
 
+# Qualité du poste (titre), du meilleur au moins bon pour le profil de Franco
+# (Data/IA en premier, puis Software/Dev, puis Analyste/Gestion, puis le reste).
+ROLE_TIER_PATTERNS = [
+    re.compile(
+        r"intelligence artificielle|machine learning|\bia\b|data scien|"
+        r"data engineer|ing[ée]nieur[s]?\s+data|\bllm\b|\bia[,)]",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"software engineer|d[ée]veloppeu?r|devops|full[\s-]?stack|backend|"
+        r"front[\s-]?end",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"data analyst|data analyste|business analyst|chef de projet",
+        re.IGNORECASE,
+    ),
+]
+
+
+def _role_rank(offer):
+    """0 = meilleur match (Data/IA), ... len(ROLE_TIER_PATTERNS) = générique."""
+    titre = offer.get("title") or ""
+    for i, pattern in enumerate(ROLE_TIER_PATTERNS):
+        if pattern.search(titre):
+            return i
+    return len(ROLE_TIER_PATTERNS)
+
+
+def _offer_sort_key(offer):
+    """Tri du meilleur au moins bon : entreprise (tier) puis qualité du poste.
+
+    Uniquement des règles statiques (mots-clés) — aucun appel Gemini ici."""
+    return (_offer_priority_rank(offer), _role_rank(offer))
+
+
 def get_client():
     global _client
     if _client is None:
@@ -120,8 +156,9 @@ def update_offer_analysis(offer_id, analysis, score_global, status=None):
 def get_top_offers(limit=15):
     """Dernières offres trouvées par le scraping, en attente de revue (pas encore analysées par Gemini).
 
-    Les offres GAFAM/IA (TOP_PRIORITY_RE) remontent en premier, puis les grandes
-    entreprises (PRIORITY_COMPANIES_RE), puis le reste."""
+    Triées du meilleur au moins bon selon deux facteurs (sans Gemini) :
+    1. l'entreprise (GAFAM/IA > grandes entreprises > reste)
+    2. la qualité du poste (Data/IA > Software/Dev > Analyste/Gestion > reste)."""
     res = (
         get_client()
         .table("offers")
@@ -131,7 +168,7 @@ def get_top_offers(limit=15):
         .limit(limit * 3)
         .execute()
     )
-    offers = sorted(res.data, key=_offer_priority_rank)
+    offers = sorted(res.data, key=_offer_sort_key)
     return offers[:limit]
 
 
