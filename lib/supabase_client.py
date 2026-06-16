@@ -153,7 +153,13 @@ def update_offer_analysis(offer_id, analysis, score_global, status=None):
     get_client().table("offers").update(row).eq("id", offer_id).execute()
 
 
-_EXCLUDED_RE = re.compile(r"\b(iscod|cfa|stages?|stagiaires?)\b", re.IGNORECASE)
+_EXCLUDED_RE = re.compile(r"\b(iscod|cfa|stages?|stagiaires?|cdd|cdi)\b", re.IGNORECASE)
+
+
+def _is_excluded(offer):
+    title = offer.get("title") or ""
+    source_name = (offer.get("sources") or {}).get("name") or ""
+    return _EXCLUDED_RE.search(title) or _EXCLUDED_RE.search(source_name)
 
 
 def get_top_offers(limit=15):
@@ -171,7 +177,7 @@ def get_top_offers(limit=15):
         .limit(limit * 3)
         .execute()
     )
-    offers = [o for o in res.data if not _EXCLUDED_RE.search(o.get("title") or "")]
+    offers = [o for o in res.data if not _is_excluded(o)]
     offers = sorted(offers, key=_offer_sort_key)
     return offers[:limit]
 
