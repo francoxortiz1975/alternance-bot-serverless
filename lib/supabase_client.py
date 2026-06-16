@@ -154,6 +154,7 @@ def update_offer_analysis(offer_id, analysis, score_global, status=None):
 
 
 _EXCLUDED_RE = re.compile(r"\b(iscod|cfa|stages?|stagiaires?|cdd|cdi)\b", re.IGNORECASE)
+_NON_OFFER_URL_RE = re.compile(r"/m[eé]tiers?/", re.IGNORECASE)
 
 
 def _is_excluded(offer):
@@ -162,7 +163,11 @@ def _is_excluded(offer):
     raw_text = offer.get("raw_text") or ""
     m = re.search(r"Entreprise\s*:\s*(.+)", raw_text)
     employer_from_raw = m.group(1).strip() if m else ""
-    return any(_EXCLUDED_RE.search(t) for t in [title, source_name, employer_from_raw] if t)
+    if any(_EXCLUDED_RE.search(t) for t in [title, source_name, employer_from_raw] if t):
+        return True
+    if _NON_OFFER_URL_RE.search(offer.get("offer_url") or ""):
+        return True
+    return False
 
 
 def get_top_offers(limit=15):

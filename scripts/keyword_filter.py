@@ -10,6 +10,9 @@ from urllib.parse import urljoin
 
 MARKDOWN_LINK_RE = re.compile(r"\[([^\]\n]+)\]\((https?://[^\s)]+|/[^\s)]*)\)")
 
+# URLs qui pointent vers des pages de description de métier (pas des offres d'emploi).
+NON_OFFER_URL_RE = re.compile(r"/m[eé]tiers?/", re.IGNORECASE)
+
 ROLE_KEYWORDS = [
     "data engineer", "data analyst", "data scientist", "data analyste",
     "ingénieur data", "ingenieur data", "intelligence artificielle",
@@ -54,6 +57,8 @@ def extraer_enlaces_filtrados(texto_markdown, base_url):
             continue
 
         url_absoluta = urljoin(base_url, url)
+        if NON_OFFER_URL_RE.search(url_absoluta):
+            continue
         if url_absoluta not in encontrados:
             encontrados[url_absoluta] = titulo
 
