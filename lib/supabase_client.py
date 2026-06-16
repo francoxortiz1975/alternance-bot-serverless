@@ -159,7 +159,10 @@ _EXCLUDED_RE = re.compile(r"\b(iscod|cfa|stages?|stagiaires?|cdd|cdi)\b", re.IGN
 def _is_excluded(offer):
     title = offer.get("title") or ""
     source_name = (offer.get("sources") or {}).get("name") or ""
-    return _EXCLUDED_RE.search(title) or _EXCLUDED_RE.search(source_name)
+    raw_text = offer.get("raw_text") or ""
+    m = re.search(r"Entreprise\s*:\s*(.+)", raw_text)
+    employer_from_raw = m.group(1).strip() if m else ""
+    return any(_EXCLUDED_RE.search(t) for t in [title, source_name, employer_from_raw] if t)
 
 
 def get_top_offers(limit=15):
