@@ -153,6 +153,9 @@ def update_offer_analysis(offer_id, analysis, score_global, status=None):
     get_client().table("offers").update(row).eq("id", offer_id).execute()
 
 
+_EXCLUDED_RE = re.compile(r"\b(iscod|cfa|stages?|stagiaires?)\b", re.IGNORECASE)
+
+
 def get_top_offers(limit=15):
     """Dernières offres trouvées par le scraping, en attente de revue (pas encore analysées par Gemini).
 
@@ -168,7 +171,8 @@ def get_top_offers(limit=15):
         .limit(limit * 3)
         .execute()
     )
-    offers = sorted(res.data, key=_offer_sort_key)
+    offers = [o for o in res.data if not _EXCLUDED_RE.search(o.get("title") or "")]
+    offers = sorted(offers, key=_offer_sort_key)
     return offers[:limit]
 
 
