@@ -36,6 +36,16 @@
 -- on conflict (url) do nothing;
 
 
+-- ── GRUPO D: Portales propios — probar con Jina ❓ ────────────────────────────
+-- Luxury / otras empresas con portales propios. Pueden ser estáticos (Jina OK)
+-- o SPA (necesitarían Firecrawl). Probar antes de activar.
+
+-- insert into sources (name, url) values
+--   ('Hermès - Alternance',    'https://talents.hermes.com/fr/sites/CX/jobs?type=Alternance'),
+--   ('Allianz France',         'https://careers.allianz.com/fr_FR/search?keywords=alternance&location=France')
+-- on conflict (url) do nothing;
+
+
 -- ── GRUPO C: No probadas aún ❓ ────────────────────────────────────────────────
 -- FAANG/Big Tech — sus portales suelen ser SPA o requieren login corporativo.
 -- Probar con Firecrawl.

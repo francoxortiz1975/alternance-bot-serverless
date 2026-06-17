@@ -18,10 +18,12 @@ from scripts.keyword_filter import es_oferta_excluida, extraer_enlaces_filtrados
 
 # Empresas con ATS público — sin necesidad de scraping
 LEVER_SOURCES = [
-    ("ManoMano", "manomano"),
+    ("ManoMano",   "manomano"),
+    ("Mistral AI", "mistral"),
 ]
 GREENHOUSE_SOURCES = [
     ("Doctolib", "doctolib"),
+    ("Airbnb",   "airbnb"),
 ]
 SMARTRECRUITERS_SOURCES = [
     ("Société Générale", "SocieteGenerale4"),
