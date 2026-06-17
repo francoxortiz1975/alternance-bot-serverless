@@ -10,6 +10,9 @@ from urllib.parse import urljoin
 
 MARKDOWN_LINK_RE = re.compile(r"\[([^\]\n]+)\]\((https?://[^\s)]+|/[^\s)]*)\)")
 
+# URLs qui pointent vers des pages de description de métier (pas des offres d'emploi).
+NON_OFFER_URL_RE = re.compile(r"/m[eé]tiers?/", re.IGNORECASE)
+
 ROLE_KEYWORDS = [
     "data engineer", "data analyst", "data scientist", "data analyste",
     "ingénieur data", "ingenieur data", "intelligence artificielle",
@@ -28,6 +31,18 @@ LOCATION_PATTERNS = [
     ),
 ]
 
+# Organismes de formation qui republient leurs propres formations comme des
+# offres d'emploi (ce ne sont pas de vraies offres d'un employeur), et offres
+# de "stage" (Franco cherche une alternance, pas un stage) — exclus du scraping
+# si ça apparaît dans l'employeur/titre de l'offre.
+EXCLUDED_KEYWORDS_RE = re.compile(r"\b(iscod|cfa|stages?|stagiaires?)\b", re.IGNORECASE)
+
+
+def es_oferta_excluida(*textos):
+    """Renvoie True si l'un des textes fournis (titre, employeur...) matche
+    un organisme de formation à exclure (ISCOD, CFA...) ou une offre de stage."""
+    return any(texto and EXCLUDED_KEYWORDS_RE.search(texto) for texto in textos)
+
 
 def extraer_enlaces_filtrados(texto_markdown, base_url):
     """Retourne une liste de {"titulo": ..., "url": ...} pour les liens dont le
@@ -42,6 +57,8 @@ def extraer_enlaces_filtrados(texto_markdown, base_url):
             continue
 
         url_absoluta = urljoin(base_url, url)
+        if NON_OFFER_URL_RE.search(url_absoluta):
+            continue
         if url_absoluta not in encontrados:
             encontrados[url_absoluta] = titulo
 
