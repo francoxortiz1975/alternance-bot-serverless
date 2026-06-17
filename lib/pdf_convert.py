@@ -1,33 +1,36 @@
-"""Conversion DOCX -> PDF via l'API CloudConvert (free tier)."""
+"""Conversion DOCX -> PDF.
 
+Primario : CloudConvert (job asíncrono, alta calidad).
+Fallback  : ConvertAPI  (POST directo, 250s gratis/mes ≈ 80 lettres).
+"""
+
+import base64
 import os
 import time
 
 import requests
 
 CLOUDCONVERT_API_URL = "https://api.cloudconvert.com/v2"
-
-
-def _headers():
-    api_key = os.environ["CLOUDCONVERT_API_KEY"]
-    return {"Authorization": f"Bearer {api_key}"}
+CONVERTAPI_URL = "https://v2.convertapi.com/convert/docx/to/pdf"
 
 
 def _raise_for_status(resp):
     if not resp.ok:
         try:
-            body = resp.json()
-            detail = body.get("message", resp.text)
+            detail = resp.json().get("message", resp.text)
         except ValueError:
             detail = resp.text
         raise requests.HTTPError(f"{resp.status_code} {detail}", response=resp)
 
 
-def docx_a_pdf(docx_bytes, filename="lettre.docx", max_wait=25, poll_interval=1.5):
-    """Convertit des bytes DOCX en bytes PDF via CloudConvert. Lève une exception en cas d'échec."""
+# ── CloudConvert ──────────────────────────────────────────────────────────────
+
+def _via_cloudconvert(docx_bytes, filename, max_wait, poll_interval):
+    headers = {"Authorization": f"Bearer {os.environ['CLOUDCONVERT_API_KEY']}"}
+
     job_resp = requests.post(
         f"{CLOUDCONVERT_API_URL}/jobs",
-        headers={**_headers(), "Content-Type": "application/json"},
+        headers={**headers, "Content-Type": "application/json"},
         json={
             "tasks": {
                 "import-file": {"operation": "import/upload"},
@@ -59,7 +62,7 @@ def docx_a_pdf(docx_bytes, filename="lettre.docx", max_wait=25, poll_interval=1.
     elapsed = 0.0
     while elapsed < max_wait:
         status_resp = requests.get(
-            f"{CLOUDCONVERT_API_URL}/jobs/{job_id}", headers=_headers(), timeout=15
+            f"{CLOUDCONVERT_API_URL}/jobs/{job_id}", headers=headers, timeout=15
         )
         _raise_for_status(status_resp)
         job = status_resp.json()["data"]
@@ -78,3 +81,42 @@ def docx_a_pdf(docx_bytes, filename="lettre.docx", max_wait=25, poll_interval=1.
         elapsed += poll_interval
 
     raise TimeoutError("CloudConvert job did not finish in time")
+
+
+# ── ConvertAPI (fallback) ─────────────────────────────────────────────────────
+
+def _via_convertapi(docx_bytes, filename):
+    secret = os.environ.get("CONVERTAPI_SECRET")
+    if not secret:
+        raise RuntimeError("CONVERTAPI_SECRET not configured")
+
+    resp = requests.post(
+        CONVERTAPI_URL,
+        params={"Secret": secret},
+        files={
+            "File": (
+                filename,
+                docx_bytes,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+        timeout=40,
+    )
+    _raise_for_status(resp)
+    files = resp.json().get("Files", [])
+    if not files:
+        raise RuntimeError("ConvertAPI returned no files")
+    return base64.b64decode(files[0]["FileData"])
+
+
+# ── Punto de entrada ──────────────────────────────────────────────────────────
+
+def docx_a_pdf(docx_bytes, filename="lettre.docx", max_wait=25, poll_interval=1.5):
+    """Convierte bytes DOCX a bytes PDF. Usa CloudConvert; cae a ConvertAPI en 402."""
+    try:
+        return _via_cloudconvert(docx_bytes, filename, max_wait, poll_interval)
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 402:
+            print("⚠️  CloudConvert sin créditos, usando ConvertAPI como fallback.")
+            return _via_convertapi(docx_bytes, filename)
+        raise
