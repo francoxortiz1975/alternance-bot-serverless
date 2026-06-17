@@ -7,14 +7,33 @@ de l'offre. L'analyse Gemini (compatibilité, score, lettre) se fait plus tard,
 """
 
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib import api_alternance_client, jina_client, supabase_client, telegram_client
-from scripts.keyword_filter import extraer_enlaces_filtrados, extraer_localizacion
+from lib import api_alternance_client, ats_client, jina_client, supabase_client, telegram_client
+from scripts.keyword_filter import es_oferta_excluida, extraer_enlaces_filtrados, extraer_localizacion
+
+# Empresas con ATS público — sin necesidad de scraping
+LEVER_SOURCES = [
+    ("ManoMano",   "manomano"),
+    ("Mistral AI", "mistral"),
+]
+GREENHOUSE_SOURCES = [
+    ("Doctolib", "doctolib"),
+    ("Airbnb",   "airbnb"),
+]
+SMARTRECRUITERS_SOURCES = [
+    ("Société Générale", "SocieteGenerale4"),
+    ("Sopra Steria",     "SopraSteria1"),
+]
+WORKDAY_SOURCES = [
+    # (subdomain, career_site, display_name)
+    ("Thales", "thales", "Careers", "Thales"),
+]
 
 
 def scrape_sources():
@@ -37,6 +56,10 @@ def scrape_sources():
             offer_url = oferta["url"]
 
             if supabase_client.get_offer_by_url(offer_url):
+                continue
+
+            if es_oferta_excluida(oferta["titulo"]):
+                print(f"   🚫 Exclu : {oferta['titulo']}")
                 continue
 
             print(f"   ➡️  Nouveau : {oferta['titulo']} ({offer_url})")
@@ -92,7 +115,13 @@ def scrape_api_searches():
                 continue
 
             title = job.get("offer", {}).get("title")
-            location = job.get("workplace", {}).get("location", {}).get("address")
+            workplace = job.get("workplace", {})
+            employeur = workplace.get("name") or workplace.get("brand") or workplace.get("legal_name")
+            location = workplace.get("location", {}).get("address")
+
+            if es_oferta_excluida(title, employeur):
+                print(f"   🚫 Exclu : {title} — {employeur}")
+                continue
 
             print(f"   ➡️  Nouveau : {title} ({offer_url})")
 
@@ -111,6 +140,56 @@ def scrape_api_searches():
     return nuevas
 
 
+def scrape_ats_sources():
+    """Fetches offers directly from public ATS APIs (Lever, Greenhouse, SmartRecruiters, Workday)."""
+    nuevas = 0
+
+    fetchers = (
+        [(name, lambda slug=slug: ats_client.fetch_lever(slug)) for name, slug in LEVER_SOURCES]
+        + [(name, lambda slug=slug: ats_client.fetch_greenhouse(slug)) for name, slug in GREENHOUSE_SOURCES]
+        + [(name, lambda cid=cid, nm=name: ats_client.fetch_smartrecruiters(cid, nm)) for name, cid in SMARTRECRUITERS_SOURCES]
+        + [(dname, lambda sd=sd, cs=cs, nm=dname: ats_client.fetch_workday(sd, cs, nm)) for _, sd, cs, dname in WORKDAY_SOURCES]
+    )
+
+    for name, fetch_fn in fetchers:
+        print(f"\n🔌 ATS — {name}")
+        try:
+            offers = fetch_fn()
+        except Exception as e:
+            print(f"   ⚠️  Erreur ATS : {e}")
+            continue
+
+        print(f"   🔎 {len(offers)} offre(s) pertinente(s)")
+        for offer in offers:
+            offer_url = offer["offer_url"]
+            if supabase_client.get_offer_by_url(offer_url):
+                continue
+            if es_oferta_excluida(offer["title"]):
+                print(f"   🚫 Exclu : {offer['title']}")
+                continue
+            print(f"   ➡️  Nouveau : {offer['title']}")
+            supabase_client.upsert_offer(
+                offer_url,
+                title=offer["title"],
+                location=offer["location"],
+                raw_text=offer["raw_text"],
+                status="new",
+            )
+            nuevas += 1
+            print(f"      ✅ Sauvegardé — {offer['location'] or 'localisation inconnue'}")
+
+    return nuevas
+
+
+def _empresa_oferta(offer):
+    source_name = (offer.get("sources") or {}).get("name")
+    if source_name:
+        return source_name
+    raw = offer.get("raw_text") or ""
+    m = re.search(r"Entreprise\s*:\s*(.+)", raw)
+    return m.group(1).strip() if m else ""
+
+
 def _build_telegram_message(nuevas_sources, nuevas_api):
     total_nuevas = nuevas_sources + nuevas_api
     offers = supabase_client.get_top_offers(15)
@@ -124,6 +203,9 @@ def _build_telegram_message(nuevas_sources, nuevas_api):
 
     for i, offer in enumerate(offers, start=1):
         lines.append(f"{i}. *{offer.get('title') or '?'}*")
+        empresa = _empresa_oferta(offer)
+        if empresa:
+            lines.append(f"   🏢 {empresa}")
         if offer.get("location"):
             lines.append(f"   📍 {offer['location']}")
         lines.append(f"   🔗 {offer['offer_url']}")
@@ -149,8 +231,9 @@ def notify_telegram(nuevas_sources, nuevas_api):
 def main():
     nuevas_sources = scrape_sources()
     nuevas_api = scrape_api_searches()
+    nuevas_ats = scrape_ats_sources()
     print("\n✅ Scraping terminé.")
-    notify_telegram(nuevas_sources, nuevas_api)
+    notify_telegram(nuevas_sources + nuevas_ats, nuevas_api)
 
 
 if __name__ == "__main__":
