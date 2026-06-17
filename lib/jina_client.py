@@ -1,4 +1,5 @@
-"""Récupération du texte d'une page web via Jina Reader (https://r.jina.ai)."""
+"""Récupération du texte d'une page web via Jina Reader (https://r.jina.ai),
+avec fallback Firecrawl pour les SPA JavaScript."""
 
 import os
 
@@ -7,11 +8,7 @@ import requests
 JINA_READER_URL = "https://r.jina.ai/"
 
 
-def fetch_texto_pagina(url, timeout=30):
-    """Récupère le texte propre d'une page web via Jina Reader.
-
-    Retourne le texte (str) ou None en cas d'échec.
-    """
+def _fetch_via_jina(url, timeout):
     headers = {}
     jina_key = os.environ.get("JINA_API_KEY")
     if jina_key:
@@ -26,6 +23,15 @@ def fetch_texto_pagina(url, timeout=30):
 
     lignes = [l.strip() for l in texte.splitlines() if l.strip()]
     texte_propre = "\n".join(lignes)
-    if len(texte_propre) > 300:
-        return texte_propre
-    return None
+    return texte_propre if len(texte_propre) > 300 else None
+
+
+def fetch_texto_pagina(url, timeout=30):
+    """Récupère le texte d'une page web. Essaie Jina Reader d'abord,
+    puis Firecrawl en fallback si Jina renvoie du contenu vide (SPA JS)."""
+    texte = _fetch_via_jina(url, timeout)
+    if texte:
+        return texte
+
+    from lib import firecrawl_client
+    return firecrawl_client.fetch_texto_pagina(url, timeout)
