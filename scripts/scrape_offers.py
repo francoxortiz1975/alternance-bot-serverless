@@ -23,6 +23,14 @@ LEVER_SOURCES = [
 GREENHOUSE_SOURCES = [
     ("Doctolib", "doctolib"),
 ]
+SMARTRECRUITERS_SOURCES = [
+    ("Société Générale", "SocieteGenerale4"),
+    ("Sopra Steria",     "SopraSteria1"),
+]
+WORKDAY_SOURCES = [
+    # (subdomain, career_site, display_name)
+    ("Thales", "thales", "Careers", "Thales"),
+]
 
 
 def scrape_sources():
@@ -134,11 +142,13 @@ def scrape_ats_sources():
     nuevas = 0
 
     fetchers = (
-        [(name, lambda slug=slug: ats_client.fetch_lever(slug), slug) for name, slug in LEVER_SOURCES]
-        + [(name, lambda slug=slug: ats_client.fetch_greenhouse(slug), slug) for name, slug in GREENHOUSE_SOURCES]
+        [(name, lambda slug=slug: ats_client.fetch_lever(slug)) for name, slug in LEVER_SOURCES]
+        + [(name, lambda slug=slug: ats_client.fetch_greenhouse(slug)) for name, slug in GREENHOUSE_SOURCES]
+        + [(name, lambda cid=cid, nm=name: ats_client.fetch_smartrecruiters(cid, nm)) for name, cid in SMARTRECRUITERS_SOURCES]
+        + [(dname, lambda sd=sd, cs=cs, nm=dname: ats_client.fetch_workday(sd, cs, nm)) for _, sd, cs, dname in WORKDAY_SOURCES]
     )
 
-    for name, fetch_fn, slug in fetchers:
+    for name, fetch_fn in fetchers:
         print(f"\n🔌 ATS — {name}")
         try:
             offers = fetch_fn()
