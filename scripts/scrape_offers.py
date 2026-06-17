@@ -7,6 +7,7 @@ de l'offre. L'analyse Gemini (compatibilité, score, lettre) se fait plus tard,
 """
 
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -140,7 +141,7 @@ def scrape_api_searches():
 
 
 def scrape_ats_sources():
-    """Fetches offers directly from public ATS APIs (Lever, Greenhouse)."""
+    """Fetches offers directly from public ATS APIs (Lever, Greenhouse, SmartRecruiters, Workday)."""
     nuevas = 0
 
     fetchers = (
@@ -180,6 +181,15 @@ def scrape_ats_sources():
     return nuevas
 
 
+def _empresa_oferta(offer):
+    source_name = (offer.get("sources") or {}).get("name")
+    if source_name:
+        return source_name
+    raw = offer.get("raw_text") or ""
+    m = re.search(r"Entreprise\s*:\s*(.+)", raw)
+    return m.group(1).strip() if m else ""
+
+
 def _build_telegram_message(nuevas_sources, nuevas_api):
     total_nuevas = nuevas_sources + nuevas_api
     offers = supabase_client.get_top_offers(15)
@@ -193,6 +203,9 @@ def _build_telegram_message(nuevas_sources, nuevas_api):
 
     for i, offer in enumerate(offers, start=1):
         lines.append(f"{i}. *{offer.get('title') or '?'}*")
+        empresa = _empresa_oferta(offer)
+        if empresa:
+            lines.append(f"   🏢 {empresa}")
         if offer.get("location"):
             lines.append(f"   📍 {offer['location']}")
         lines.append(f"   🔗 {offer['offer_url']}")

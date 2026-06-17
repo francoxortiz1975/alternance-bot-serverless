@@ -1,8 +1,13 @@
 """Clients pour les APIs publiques d'ATS (Applicant Tracking Systems).
 
 Lever, Greenhouse, SmartRecruiters et Workday exposent des endpoints JSON
+<<<<<<< HEAD
 publics sans authentification. Les offres sont filtrées par mots-clés de rôle
 et localisation Paris.
+=======
+publics sans authentification. Les offres sont filtrées par mots-clés de rôle,
+localisation Paris ET type de contrat alternance/apprentissage.
+>>>>>>> claude/telegram-api-400-error-x2czih
 """
 
 import re
@@ -10,8 +15,17 @@ import requests
 
 _ROLE_RE = re.compile(
     r"data|engineer|ingénieur|développeur|developer|devops|software|"
+<<<<<<< HEAD
     r"informatique|digital|tech|ia\b|intelligence artificielle|"
     r"alternance|apprentissage|stage",
+=======
+    r"informatique|digital|tech|ia\b|intelligence artificielle",
+    re.IGNORECASE,
+)
+
+_ALTERNANCE_RE = re.compile(
+    r"alternance|alternant|apprentissage|apprenti",
+>>>>>>> claude/telegram-api-400-error-x2czih
     re.IGNORECASE,
 )
 
@@ -22,16 +36,39 @@ _PARIS_RE = re.compile(
 )
 
 
+<<<<<<< HEAD
 def _is_relevant(title, location=""):
     return _ROLE_RE.search(title or "") and _PARIS_RE.search(location or title or "")
+=======
+def _is_relevant(title, location="", commitment=""):
+    """Filtre : rôle tech + localisation Paris + contrat alternance."""
+    is_alternance = _ALTERNANCE_RE.search(title or "") or _ALTERNANCE_RE.search(commitment or "")
+    return (
+        _ROLE_RE.search(title or "")
+        and _PARIS_RE.search(location or title or "")
+        and is_alternance
+    )
+
+
+def _strip_html(html):
+    text = re.sub(r"<[^>]+>", " ", html or "")
+    text = re.sub(r"&[a-z]+;", " ", text)
+    return re.sub(r" {2,}", " ", text).strip()
+>>>>>>> claude/telegram-api-400-error-x2czih
 
 
 # ── Lever ─────────────────────────────────────────────────────────────────────
 
 def fetch_lever(slug, timeout=20):
+<<<<<<< HEAD
     """Retourne les offres d'une entreprise sur Lever (JSON public).
 
     slug : identifiant de l'entreprise sur jobs.lever.co (ex: 'manomano')
+=======
+    """Retourne les offres alternance sur Lever (JSON public).
+
+    slug : identifiant sur jobs.lever.co (ex: 'manomano', 'mistral')
+>>>>>>> claude/telegram-api-400-error-x2czih
     """
     url = f"https://api.lever.co/v0/postings/{slug}?mode=json"
     try:
@@ -44,9 +81,17 @@ def fetch_lever(slug, timeout=20):
     results = []
     for p in postings:
         title = p.get("text", "")
+<<<<<<< HEAD
         location = (p.get("categories") or {}).get("location", "")
         offer_url = p.get("hostedUrl", "")
         if not offer_url or not _is_relevant(title, location):
+=======
+        cats = p.get("categories") or {}
+        location = cats.get("location", "")
+        commitment = cats.get("commitment", "")
+        offer_url = p.get("hostedUrl", "")
+        if not offer_url or not _is_relevant(title, location, commitment):
+>>>>>>> claude/telegram-api-400-error-x2czih
             continue
         results.append({
             "title": title,
@@ -56,7 +101,11 @@ def fetch_lever(slug, timeout=20):
                 f"Entreprise : {slug.capitalize()}\n"
                 f"Poste : {title}\n"
                 f"Localisation : {location}\n"
+<<<<<<< HEAD
                 f"Département : {(p.get('categories') or {}).get('department', '')}\n"
+=======
+                f"Département : {cats.get('department', '')}\n"
+>>>>>>> claude/telegram-api-400-error-x2czih
                 f"Lien : {offer_url}\n\n"
                 + _strip_html(p.get("descriptionPlain") or p.get("description") or "")
             ),
@@ -67,9 +116,15 @@ def fetch_lever(slug, timeout=20):
 # ── Greenhouse ────────────────────────────────────────────────────────────────
 
 def fetch_greenhouse(slug, timeout=20):
+<<<<<<< HEAD
     """Retourne les offres d'une entreprise sur Greenhouse (JSON public).
 
     slug : identifiant du board Greenhouse (ex: 'doctolib')
+=======
+    """Retourne les offres alternance sur Greenhouse (JSON public).
+
+    slug : identifiant du board (ex: 'doctolib', 'airbnb')
+>>>>>>> claude/telegram-api-400-error-x2czih
     """
     url = f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true"
     try:
@@ -104,9 +159,15 @@ def fetch_greenhouse(slug, timeout=20):
 # ── SmartRecruiters ───────────────────────────────────────────────────────────
 
 def fetch_smartrecruiters(company_id, company_name, timeout=20):
+<<<<<<< HEAD
     """Retourne les offres d'une entreprise sur SmartRecruiters (JSON public).
 
     company_id : identifiant SmartRecruiters (ex: 'SocieteGenerale4', 'SopraSteria1')
+=======
+    """Retourne les offres alternance sur SmartRecruiters (JSON public).
+
+    company_id : ex 'SocieteGenerale4', 'SopraSteria1'
+>>>>>>> claude/telegram-api-400-error-x2czih
     """
     url = f"https://api.smartrecruiters.com/v1/companies/{company_id}/postings"
     try:
@@ -143,12 +204,19 @@ def fetch_smartrecruiters(company_id, company_name, timeout=20):
 # ── Workday ───────────────────────────────────────────────────────────────────
 
 def fetch_workday(subdomain, career_site, company_name, search_text="alternance", timeout=25):
+<<<<<<< HEAD
     """Retourne les offres d'une entreprise sur Workday (API POST publique).
+=======
+    """Retourne les offres alternance sur Workday (API POST publique).
+>>>>>>> claude/telegram-api-400-error-x2czih
 
     subdomain   : ex 'thales' → thales.wd3.myworkdayjobs.com
     career_site : ex 'Careers'
     """
+<<<<<<< HEAD
     # Workday uses wd3 for most European companies; try wd3 then wd1
+=======
+>>>>>>> claude/telegram-api-400-error-x2czih
     for wdN in ("wd3", "wd1", "wd5"):
         base = f"https://{subdomain}.{wdN}.myworkdayjobs.com"
         api_url = f"{base}/wday/cxs/{subdomain}/{career_site}/jobs"
@@ -186,6 +254,7 @@ def fetch_workday(subdomain, career_site, company_name, search_text="alternance"
         except requests.RequestException:
             continue
     return []
+<<<<<<< HEAD
 
 
 # ── Utilitaire ────────────────────────────────────────────────────────────────
@@ -278,3 +347,5 @@ def _strip_html(html):
     text = re.sub(r"<[^>]+>", " ", html or "")
     text = re.sub(r"&[a-z]+;", " ", text)
     return re.sub(r" {2,}", " ", text).strip()
+=======
+>>>>>>> claude/telegram-api-400-error-x2czih
