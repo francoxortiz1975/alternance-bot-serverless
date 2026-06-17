@@ -23,7 +23,7 @@ Profil complet :
 - Article co-signé accepté ITiCSE 2026 (ACM) — LLM dans l'enseignement
 - ENSIMAG Summer School AI 2025 sélectionné, Apple Swift Challenge, Claude Code Builders hackathon
 - Langues : espagnol natif, anglais C1 (IELTS), français B2 (DELF)
-- Portfolio : www.francoxortiz.vercel.app
+- Portfolio : https://francoxortiz.vercel.app
 
 Salaire légal minimum apprentissage (21–25 ans) :
 - 1ère année : ~53% SMIC ≈ 955 €/mois | 2ème année : ~61% SMIC ≈ 1 099 €/mois

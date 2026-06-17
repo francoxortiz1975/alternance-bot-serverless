@@ -13,7 +13,7 @@ from .gemini_client import raccourcir_para_tech
 
 TEMPLATE_LETTRE = Path(__file__).parent.parent / "templates" / "MODEL_Lettre_Motivation_ORTIZ_IngData_.docx"
 
-PORTFOLIO_URL = "https://www.francoxortiz.vercel.app"
+PORTFOLIO_URL = "https://francoxortiz.vercel.app"
 PORTFOLIO_TEXTE = "francoxortiz.dev"
 
 
