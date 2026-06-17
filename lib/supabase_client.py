@@ -40,12 +40,9 @@ def _offer_priority_rank(offer):
 ROLE_TIER_PATTERNS = [
     re.compile(
         r"intelligence artificielle|machine learning|\bia\b|data scien|"
-        r"data engineer|ing[ée]nieur[s]?\s+data|\bllm\b|\bia[,)]",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"software engineer|d[ée]veloppeu?r|devops|full[\s-]?stack|backend|"
-        r"front[\s-]?end",
+        r"data engineer|ing[ée]nieur[s]?\s+data|\bllm\b|\bia[,)]|"
+        r"software engineer|ing[ée]nieur[s]?\s+logiciel|d[ée]veloppeu?r|"
+        r"devops|full[\s-]?stack|backend|front[\s-]?end",
         re.IGNORECASE,
     ),
     re.compile(
