@@ -20,6 +20,7 @@ jobs:
       - run: python scripts/scrape_offers.py
         env:
           JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           API_ALTERNANCE_KEY: ${{ secrets.API_ALTERNANCE_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
