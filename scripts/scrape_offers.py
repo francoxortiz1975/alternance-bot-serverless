@@ -13,8 +13,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib import api_alternance_client, jina_client, supabase_client, telegram_client
+from lib import api_alternance_client, ats_client, jina_client, supabase_client, telegram_client
 from scripts.keyword_filter import es_oferta_excluida, extraer_enlaces_filtrados, extraer_localizacion
+
+# Empresas con ATS público — sin necesidad de scraping
+LEVER_SOURCES = [
+    ("ManoMano", "manomano"),
+]
+GREENHOUSE_SOURCES = [
+    ("Doctolib", "doctolib"),
+]
 
 
 def scrape_sources():
@@ -121,6 +129,45 @@ def scrape_api_searches():
     return nuevas
 
 
+def scrape_ats_sources():
+    """Fetches offers directly from public ATS APIs (Lever, Greenhouse)."""
+    nuevas = 0
+
+    fetchers = (
+        [(name, lambda slug=slug: ats_client.fetch_lever(slug), slug) for name, slug in LEVER_SOURCES]
+        + [(name, lambda slug=slug: ats_client.fetch_greenhouse(slug), slug) for name, slug in GREENHOUSE_SOURCES]
+    )
+
+    for name, fetch_fn, slug in fetchers:
+        print(f"\n🔌 ATS — {name}")
+        try:
+            offers = fetch_fn()
+        except Exception as e:
+            print(f"   ⚠️  Erreur ATS : {e}")
+            continue
+
+        print(f"   🔎 {len(offers)} offre(s) pertinente(s)")
+        for offer in offers:
+            offer_url = offer["offer_url"]
+            if supabase_client.get_offer_by_url(offer_url):
+                continue
+            if es_oferta_excluida(offer["title"]):
+                print(f"   🚫 Exclu : {offer['title']}")
+                continue
+            print(f"   ➡️  Nouveau : {offer['title']}")
+            supabase_client.upsert_offer(
+                offer_url,
+                title=offer["title"],
+                location=offer["location"],
+                raw_text=offer["raw_text"],
+                status="new",
+            )
+            nuevas += 1
+            print(f"      ✅ Sauvegardé — {offer['location'] or 'localisation inconnue'}")
+
+    return nuevas
+
+
 def _build_telegram_message(nuevas_sources, nuevas_api):
     total_nuevas = nuevas_sources + nuevas_api
     offers = supabase_client.get_top_offers(15)
@@ -159,8 +206,9 @@ def notify_telegram(nuevas_sources, nuevas_api):
 def main():
     nuevas_sources = scrape_sources()
     nuevas_api = scrape_api_searches()
+    nuevas_ats = scrape_ats_sources()
     print("\n✅ Scraping terminé.")
-    notify_telegram(nuevas_sources, nuevas_api)
+    notify_telegram(nuevas_sources + nuevas_ats, nuevas_api)
 
 
 if __name__ == "__main__":
