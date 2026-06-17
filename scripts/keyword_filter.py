@@ -37,6 +37,8 @@ LOCATION_PATTERNS = [
 # si ça apparaît dans l'employeur/titre de l'offre.
 EXCLUDED_KEYWORDS_RE = re.compile(r"\b(iscod|cfa|stages?|stagiaires?)\b", re.IGNORECASE)
 
+ALTERNANCE_RE = re.compile(r"alternance|alternant|apprentissage|apprenti", re.IGNORECASE)
+
 
 def es_oferta_excluida(*textos):
     """Renvoie True si l'un des textes fournis (titre, employeur...) matche

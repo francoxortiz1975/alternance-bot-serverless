@@ -15,7 +15,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib import api_alternance_client, ats_client, jina_client, supabase_client, telegram_client
-from scripts.keyword_filter import es_oferta_excluida, extraer_enlaces_filtrados, extraer_localizacion
+from scripts.keyword_filter import (
+    ALTERNANCE_RE,
+    es_oferta_excluida,
+    extraer_enlaces_filtrados,
+    extraer_localizacion,
+)
 
 # Empresas con ATS público — sin necesidad de scraping
 LEVER_SOURCES = [
@@ -49,6 +54,10 @@ def scrape_sources():
             print("   ⚠️  Impossible de lire la page de listing, skip.")
             continue
 
+        # Si la URL de la source ya filtra por alternance, confiamos en todos
+        # sus resultados. Sino, verificamos contrato en la página de detalle.
+        source_is_alternance_page = bool(ALTERNANCE_RE.search(source["url"]))
+
         ofertas = extraer_enlaces_filtrados(texto_listing, source["url"])
         print(f"   🔎 {len(ofertas)} lien(s) correspondant aux mots-clés")
 
@@ -67,6 +76,10 @@ def scrape_sources():
             texto_detalle = jina_client.fetch_texto_pagina(offer_url)
             if not texto_detalle:
                 print("      ⚠️  Page de détail illisible, skip.")
+                continue
+
+            if not source_is_alternance_page and not ALTERNANCE_RE.search(texto_detalle):
+                print(f"      🚫 Pas alternance (détail) : {oferta['titulo']}")
                 continue
 
             localisation = extraer_localizacion(texto_detalle)
