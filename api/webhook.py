@@ -23,23 +23,59 @@ CONFIRM_YES = {"s", "si", "sí", "o", "oui", "yes", "y"}
 CONFIRM_NO = {"n", "no", "non"}
 URL_RE = re.compile(r"https?://\S+")
 
-# Détecte une durée explicitement < 24 mois dans le raw_text avant d'appeler Gemini.
-_DUREE_RE = re.compile(
-    r"(?:dur[ée]e\s*(?:du\s+contrat\s*)?:?\s*(?:de\s+)?"
-    r"|contrat\s+de\s+"
-    r"|alternance\s+(?:de\s+)?)"
+# ── Détection de durée incompatible avant d'appeler Gemini ───────────────────
+
+# Contexte suivi de X mois
+_DUREE_MOIS_RE = re.compile(
+    r"(?:"
+    r"dur[ée]e\s*(?:du\s+contrat\s*)?:?\s*(?:de\s+)?"
+    r"|contrat\s+(?:d[e']\s*)?(?:apprentissage\s+|alternance\s+)?(?:de\s+)?"
+    r"|alternance\s+(?:de\s+)?"
+    r"|apprentissage\s+(?:de\s+)?"
+    r"|(?:pour|sur|pendant)\s+(?:une\s+dur[ée]e\s+de\s+)?"
+    r")"
     r"(\d+)\s*mois",
+    re.IGNORECASE,
+)
+
+# X mois d'alternance / d'apprentissage (durée en suffixe)
+_DUREE_MOIS_SUFFIX_RE = re.compile(
+    r"(\d+)\s*mois\s+d[e']\s*(?:alternance|apprentissage|contrat)",
+    re.IGNORECASE,
+)
+
+# Contexte suivi de X an / un an → converti en mois
+_DUREE_AN_RE = re.compile(
+    r"(?:"
+    r"dur[ée]e\s*(?:du\s+contrat\s*)?:?\s*(?:de\s+)?"
+    r"|contrat\s+(?:d[e']\s*)?(?:apprentissage\s+|alternance\s+)?(?:de\s+)?"
+    r"|alternance\s+(?:d[e']\s*)?"
+    r"|apprentissage\s+(?:d[e']\s*)?"
+    r"|(?:pour|sur|pendant)\s+(?:une\s+dur[ée]e\s+de\s+)?"
+    r")"
+    r"(un|une|1|2)\s*an(?:née)?s?",
     re.IGNORECASE,
 )
 
 
 def _duree_incompatible(raw_text):
-    """Retourne le nb de mois si durée < 24 trouvée dans le texte, sinon None."""
-    m = _DUREE_RE.search(raw_text or "")
+    """Retourne le nombre de mois si durée < 24 détectée dans raw_text, sinon None."""
+    raw = raw_text or ""
+
+    for pat in (_DUREE_MOIS_RE, _DUREE_MOIS_SUFFIX_RE):
+        m = pat.search(raw)
+        if m:
+            mois = int(m.group(1))
+            if mois < 24:
+                return mois
+
+    m = _DUREE_AN_RE.search(raw)
     if m:
-        mois = int(m.group(1))
+        val = m.group(1).lower()
+        mois = 12 if val in ("un", "une", "1") else 24
         if mois < 24:
             return mois
+
     return None
 
 
