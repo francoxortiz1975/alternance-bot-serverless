@@ -103,6 +103,10 @@ Data_Analyst :
 IT_Generalist :
 {para_IT_Generalist}
 
+IMPORTANT — LANGUE : rédige toutes les valeurs textuelles du JSON en español (espagnol).
+Les clés JSON restent telles quelles. EXCEPTION : "paragraphe_tech_adapte" et "phrase_motivation"
+doivent obligatoirement rester en français (ils sont insérés dans la lettre de motivation).
+
 Offre :
 {offre}
 

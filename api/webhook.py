@@ -19,7 +19,7 @@ gemini_client.configure_api_key(os.environ["GEMINI_API_KEY"])
 ASSETS_CVS = Path(__file__).parent.parent / "assets" / "cvs"
 
 GREETINGS = {"hola", "hello", "hi", "/start", "/top"}
-CONFIRM_YES = {"o", "oui", "si", "sí", "yes", "y"}
+CONFIRM_YES = {"s", "si", "sí", "o", "oui", "yes", "y"}
 CONFIRM_NO = {"n", "no", "non"}
 URL_RE = re.compile(r"https?://\S+")
 
@@ -76,7 +76,7 @@ def formater_analyse(infos):
 
     taches = infos.get("taches", [])
     if taches:
-        L.append("📋 *Tâches :*")
+        L.append("📋 *Tareas:*")
         for t in taches:
             L.append(f"• {t}")
         L.append("")
@@ -93,14 +93,14 @@ def formater_analyse(infos):
 
     avantages = infos.get("avantages", [])
     if avantages:
-        L.append("🎁 *Avantages :*")
+        L.append("🎁 *Ventajas:*")
         for a in avantages:
             L.append(f"• {a}")
         L.append("")
 
     inconvenients = infos.get("inconvenients", [])
     if inconvenients:
-        L.append("⚠️ *Points d'attention :*")
+        L.append("⚠️ *Puntos de atención:*")
         for i in inconvenients:
             L.append(f"• {i}")
         L.append("")
@@ -109,13 +109,13 @@ def formater_analyse(infos):
     if compat:
         score_global = 0
         labels = {
-            "stack": "Stack technique",
-            "missions": "Missions",
-            "salaire": "Salaire",
-            "localisation": "Localisation",
-            "entreprise": "Entreprise",
+            "stack": "Stack técnico",
+            "missions": "Misiones",
+            "salaire": "Salario",
+            "localisation": "Localización",
+            "entreprise": "Empresa",
         }
-        L.append("📊 *Compatibilité :*")
+        L.append("📊 *Compatibilidad:*")
         for cle, label in labels.items():
             if cle in compat:
                 s = compat[cle].get("score", 0)
@@ -125,21 +125,21 @@ def formater_analyse(infos):
                 em = score_emoji(s)
                 L.append(f"{em} {label}: {s}%  —  {note}")
         L.append("─────────────────────")
-        L.append(f"🎯 *Score global : {score_global:.0f}%*")
+        L.append(f"🎯 *Score global: {score_global:.0f}%*")
         L.append("")
 
     opinion = infos.get("opinion", "")
     if opinion:
-        L.append("💬 *Opinion :*")
+        L.append("💬 *Opinión:*")
         L.append(opinion)
         L.append("")
 
     if not duree_ok:
-        L.append(f"🚫 *Durée {duree} mois — incompatible avec les 24 mois requis.*")
-        L.append("❌ Candidature impossible.")
+        L.append(f"🚫 *Duración {duree} meses — incompatible con los 24 meses del Máster MIAGE.*")
+        L.append("❌ Candidatura imposible.")
     else:
         L.append("─────────────────────")
-        L.append("Génère la candidature ? Réponds *o* ou *n*")
+        L.append("¿Genero la candidatura? Responde *s* o *n*")
 
     return "\n".join(L)
 
@@ -265,7 +265,7 @@ def handle_selection(chat_id, text, context):
         if mois is not None:
             telegram_client.send_message(
                 chat_id,
-                f"🚫 Durée {mois} mois — incompatible avec les 24 mois du Master MIAGE.\n❌ Candidature impossible.",
+                f"🚫 Duración {mois} meses — incompatible con los 24 meses del Máster MIAGE.\n❌ Candidatura imposible.",
             )
             supabase_client.update_offer_analysis(offer_id, {"duree_mois": mois}, score_global=0, status="incompatible")
             _proponer_otra_oferta(chat_id, offer_ids)
@@ -325,7 +325,7 @@ def handle_confirmation(chat_id, text, context):
         _proponer_otra_oferta(chat_id, offer_ids)
 
     else:
-        telegram_client.send_message(chat_id, "Responde *o* (sí) o *n* (no).")
+        telegram_client.send_message(chat_id, "Responde *s* (sí) o *n* (no).")
 
 
 # ─── Routage principal ──────────────────────────────────────────────────────
