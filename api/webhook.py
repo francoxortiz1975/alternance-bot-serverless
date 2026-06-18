@@ -23,6 +23,25 @@ CONFIRM_YES = {"o", "oui", "si", "sí", "yes", "y"}
 CONFIRM_NO = {"n", "no", "non"}
 URL_RE = re.compile(r"https?://\S+")
 
+# Détecte une durée explicitement < 24 mois dans le raw_text avant d'appeler Gemini.
+_DUREE_RE = re.compile(
+    r"(?:dur[ée]e\s*(?:du\s+contrat\s*)?:?\s*(?:de\s+)?"
+    r"|contrat\s+de\s+"
+    r"|alternance\s+(?:de\s+)?)"
+    r"(\d+)\s*mois",
+    re.IGNORECASE,
+)
+
+
+def _duree_incompatible(raw_text):
+    """Retourne le nb de mois si durée < 24 trouvée dans le texte, sinon None."""
+    m = _DUREE_RE.search(raw_text or "")
+    if m:
+        mois = int(m.group(1))
+        if mois < 24:
+            return mois
+    return None
+
 
 # ─── Formatage (migré de bot_telegram.py) ────────────────────────────────────
 
@@ -242,6 +261,16 @@ def handle_selection(chat_id, text, context):
 
     infos = offer.get("analysis")
     if not infos:
+        mois = _duree_incompatible(offer.get("raw_text") or "")
+        if mois is not None:
+            telegram_client.send_message(
+                chat_id,
+                f"🚫 Durée {mois} mois — incompatible avec les 24 mois du Master MIAGE.\n❌ Candidature impossible.",
+            )
+            supabase_client.update_offer_analysis(offer_id, {"duree_mois": mois}, score_global=0, status="incompatible")
+            _proponer_otra_oferta(chat_id, offer_ids)
+            return
+
         telegram_client.send_message(chat_id, "🔎 Analizando oferta con Gemini...")
         try:
             infos = gemini_client.analyser_offre(offer["raw_text"])
