@@ -261,8 +261,14 @@ def handle_selection(chat_id, text, context):
 
     infos = offer.get("analysis")
     if not infos:
-        mois = _duree_incompatible(offer.get("raw_text") or "")
-        if mois is not None:
+        raw = offer.get("raw_text") or ""
+        # 1. Regex gratuito
+        mois = _duree_incompatible(raw)
+        # 2. Mini Gemini (Flash-Lite, cuota separada) si el regex no detectó nada
+        if mois is None:
+            mois = gemini_client.check_duree_contrat(raw)
+
+        if mois is not None and mois < 24:
             telegram_client.send_message(
                 chat_id,
                 f"🚫 Duración {mois} meses — incompatible con los 24 meses del Máster MIAGE.\n❌ Candidatura imposible.",

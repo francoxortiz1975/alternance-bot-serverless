@@ -179,6 +179,27 @@ def _extraire_json(texte):
     return _extraire_json(response2.text)
 
 
+def check_duree_contrat(offre_texte):
+    """Mini-appel Gemini (Flash-Lite) pour extraire la durée du contrat.
+
+    Retourne le nombre de mois (int) si trouvé et < 24, sinon None.
+    Utilise uniquement les 2 000 premiers caractères — la durée est presque
+    toujours dans l'en-tête ou les premières lignes de l'offre.
+    """
+    prompt = (
+        "Extrae la duración del contrato de esta oferta de empleo. "
+        "Responde ÚNICAMENTE con el número de meses (entero). "
+        "Si no está especificada o es ambigua, responde 0.\n\n"
+        + (offre_texte or "")[:2000]
+    )
+    try:
+        resp = _gemini_generate(prompt, model_name="gemini-2.0-flash-lite", max_retries=1, max_attente=5)
+        mois = int(resp.text.strip())
+        return mois if mois > 0 else None
+    except Exception:
+        return None
+
+
 def analyser_offre(offre_texte):
     """Analyse une offre et retourne le dict `infos` (même format que candidature_auto.py)."""
     prompt = PROMPT_TEMPLATE.format(
