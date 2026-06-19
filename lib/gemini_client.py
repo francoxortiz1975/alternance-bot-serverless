@@ -103,9 +103,15 @@ Data_Analyst :
 IT_Generalist :
 {para_IT_Generalist}
 
-IMPORTANT — LANGUE : rédige toutes les valeurs textuelles du JSON en español (espagnol).
-Les clés JSON restent telles quelles. EXCEPTION : "paragraphe_tech_adapte" et "phrase_motivation"
-doivent obligatoirement rester en français (ils sont insérés dans la lettre de motivation).
+IMPORTANT — LANGUE :
+Les champs suivants doivent être rédigés en ESPAÑOL (pour affichage dans le bot) :
+  taches, avantages, inconvenients, opinion, jour_type, salaire,
+  distance_dauphine, et tous les champs "note" dans compatibilite.
+
+Tous les autres champs doivent rester en FRANÇAIS, car ils sont insérés
+directement dans la lettre de motivation ou dans les documents officiels :
+  entreprise_nom, equipe_departement, localisation, titre_objet,
+  phrase_motivation, domaine_technique, secteur, paragraphe_tech_adapte.
 
 Offre :
 {offre}
