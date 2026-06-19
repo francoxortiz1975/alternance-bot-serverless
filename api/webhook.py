@@ -350,6 +350,7 @@ def handle_confirmation(chat_id, text, context):
 
             entreprise = infos.get("entreprise_nom", "Entreprise").replace(" ", "_")
             telegram_client.send_document(chat_id, pdf_bytes, f"Lettre_Motivation_{entreprise}.pdf")
+            telegram_client.send_document(chat_id, docx_bytes, f"Lettre_Motivation_{entreprise}.docx")
 
             cv_filename = CV_MAP.get(infos.get("type_cv"), CV_MAP["Data_Engineer"])
             cv_bytes = (ASSETS_CVS / cv_filename).read_bytes()
