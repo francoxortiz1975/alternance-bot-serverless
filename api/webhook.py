@@ -1,5 +1,6 @@
 """Webhook Telegram (Vercel serverless function, sans framework)."""
 
+import hashlib
 import json
 import os
 import re
@@ -396,6 +397,53 @@ def process_update(update):
             pass
 
 
+def handle_raw_text_offer(chat_id, text):
+    """Analiza el texto de una oferta pegado directamente (sin URL)."""
+    pseudo_url = "text://" + hashlib.sha256(text.encode()).hexdigest()[:16]
+
+    existing = supabase_client.get_offer_by_url(pseudo_url)
+    if existing and existing.get("analysis"):
+        infos = existing["analysis"]
+        telegram_client.send_message(chat_id, formater_analyse(infos))
+        if infos.get("duree_mois") == 24:
+            supabase_client.set_conversation_state(
+                chat_id, "awaiting_confirmation", {"offer_id": existing["id"]}
+            )
+        return
+
+    mois = _duree_incompatible(text)
+    if mois is None:
+        mois = gemini_client.check_duree_contrat(text)
+    if mois is not None and mois < 24:
+        telegram_client.send_message(
+            chat_id,
+            f"🚫 Duración {mois} meses — incompatible con los 24 meses del Máster MIAGE.\n❌ Candidatura imposible.",
+        )
+        return
+
+    telegram_client.send_message(chat_id, "🔎 Analizando oferta con Gemini...")
+    try:
+        infos = gemini_client.analyser_offre(text)
+    except Exception as e:
+        telegram_client.send_message(chat_id, f"⚠️ Gemini no pudo analizar la oferta: {e}")
+        return
+
+    score = calcular_score_global(infos)
+    status = "new" if infos.get("duree_mois") == 24 else "incompatible"
+    offer = supabase_client.upsert_offer(
+        pseudo_url, analysis=infos, score_global=score, raw_text=text, status=status
+    )
+
+    telegram_client.send_message(chat_id, formater_analyse(infos))
+
+    if infos.get("duree_mois") == 24:
+        supabase_client.set_conversation_state(
+            chat_id, "awaiting_confirmation", {"offer_id": offer["id"]}
+        )
+    else:
+        supabase_client.clear_conversation_state(chat_id)
+
+
 def _dispatch(chat_id, text):
     conv = supabase_client.get_conversation_state(chat_id)
     state = conv.get("state", "idle")
@@ -420,11 +468,14 @@ def _dispatch(chat_id, text):
         handle_new_offer_url(chat_id, url_match.group(0))
     elif text.lower() in GREETINGS:
         handle_top10(chat_id)
+    elif len(text) >= 150:
+        handle_raw_text_offer(chat_id, text)
     else:
         telegram_client.send_message(
             chat_id,
-            "👋 Envíame la URL de una oferta para analizarla, escribe *hola* para ver ofertas guardadas, "
-            "o `/add <url>` para agregar una página de carreras a monitorear.",
+            "👋 Envíame la URL de una oferta, pega el texto completo de la oferta, "
+            "escribe *hola* para ver ofertas guardadas, "
+            "o `/add <url>` para agregar una página de carreras.",
         )
 
 
